@@ -18,6 +18,9 @@ TEST_OBJ = $(OBJ_DIR)/test_sensor.o
 CXXFLAGS = -Wall -Iinclude -Iexternal/googletest/googletest/include -Wno-unused-function
 LDFLAGS = -Lexternal/googletest/googletest/lib -lgtest -lgtest_main -pthread
 
+# AddressSanitizer flags
+ASAN_FLAGS = -fsanitize=address -g
+
 # Targets
 all: dirs $(BIN_DIR)/sensor_program $(BIN_DIR)/test_sensor
 
@@ -53,12 +56,20 @@ $(OBJ_DIR)/utils.o: src/utils.c
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-# Run Cppcheck
+# Run Cppcheck (for static analysis)
 lint:
 	cppcheck --force --enable=all --inconclusive --std=c++17 -Iinclude -I/usr/include --suppress=missingIncludeSystem --suppress=syntaxError src/*.c
 
-# Run the tests (Google Test)
+# Run tests (Google Test)
 test: $(BIN_DIR)/test_sensor
 	$(BIN_DIR)/test_sensor
 
-.PHONY: all dirs clean lint debug test
+# Run tests with Valgrind (memory checking)
+valgrind: $(BIN_DIR)/test_sensor
+	valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all ./$(BIN_DIR)/test_sensor
+
+# Run tests with AddressSanitizer (for memory error detection)
+asan: $(BIN_DIR)/test_sensor
+	./$(BIN_DIR)/test_sensor
+
+.PHONY: all dirs clean lint debug test valgrind asan
