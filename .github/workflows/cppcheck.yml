@@ -1,0 +1,32 @@
+name: C/C++ Analysis and Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Set up GoogleTest
+      run: |
+        mkdir -p googletest/build
+        cd googletest
+        cmake -S . -B build
+        make -C build
+
+    - name: Run cppcheck
+      run: cppcheck --enable=all --inconclusive --std=c99 --suppress=missingIncludeSystem .
+
+    - name: Build and run tests
+      run: |
+        make tests
+        make run-tests
