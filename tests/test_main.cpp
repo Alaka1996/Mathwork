@@ -1,5 +1,8 @@
 #include "gtest/gtest.h"
-#include "utils.h"
+extern "C" {
+    #include "utils.h"  // Include the C header for your C function
+    #include "sensor.h"
+}
 
 TEST(UtilsTest, CalculateAverage) {
     uint16_t data[BUFFER_SIZE] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
