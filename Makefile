@@ -1,46 +1,64 @@
-# Compiler and flags
+# Variables
+CC = gcc
 CXX = g++
-CXXFLAGS = -Wall -Wextra -pedantic -g
+CFLAGS = -Wall -Iinclude -Iexternal/googletest/googletest/include -Wno-unused-function
+SRC_DIR = src
+OBJ_DIR = obj
+BIN_DIR = bin
 
-# Google Test configuration
-GTEST_DIR = ./googletest
-GTEST_INCLUDE = $(GTEST_DIR)/include
-GTEST_LIB = $(GTEST_DIR)/build
+# Source files
+SRC = $(wildcard $(SRC_DIR)/*.c)
+OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
+MAIN_OBJ = $(OBJ_DIR)/main.o
+UTILS_OBJ = $(OBJ_DIR)/utils.o
+SENSOR_OBJ = $(OBJ_DIR)/sensor.o
+TEST_OBJ = $(OBJ_DIR)/test_sensor.o
 
-# Source and test files
-SRC = src/sensor.cpp src/utils.cpp
-TEST_SRC = tests/test_main.cpp
-OBJ = $(SRC:.cpp=.o)
-TEST_OBJ = tests/test_main.o
-TEST_EXEC = tests/test_executable
+# Google Test flags
+CXXFLAGS = -Wall -Iinclude -Iexternal/googletest/googletest/include -Wno-unused-function
+LDFLAGS = -Lexternal/googletest/googletest/lib -lgtest -lgtest_main -pthread
 
-# Valgrind and AddressSanitizer flags
-ASAN_FLAGS = -fsanitize=address
-VALGRIND_COMMAND = valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all
+# Targets
+all: dirs $(BIN_DIR)/sensor_program $(BIN_DIR)/test_sensor
 
-# Target: Build tests
-all: $(TEST_EXEC)
+# Create directories
+dirs:
+	mkdir -p $(OBJ_DIR) $(BIN_DIR)
 
-# Compilation for the test executable
-$(TEST_EXEC): $(OBJ) $(TEST_OBJ)
-	$(CXX) $(CXXFLAGS) $(ASAN_FLAGS) -L$(GTEST_LIB) -lgtest -lgtest_main -o $@ $^
+# Build the main program
+$(BIN_DIR)/sensor_program: $(MAIN_OBJ) $(SENSOR_OBJ) $(UTILS_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
 
-# Compilation for test object files
-$(TEST_OBJ): $(TEST_SRC)
-	$(CXX) $(CXXFLAGS) -I$(GTEST_INCLUDE) -c $< -o $@
+# Build the test binary
+$(BIN_DIR)/test_sensor: $(TEST_OBJ) $(SENSOR_OBJ) $(UTILS_OBJ)
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
-# Compilation for source files
-$(OBJ): $(SRC)
+# Compile main source file
+$(OBJ_DIR)/main.o: main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile test file
+$(OBJ_DIR)/test_sensor.o: tests/test_sensor.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Clean up build files
+# Compile sensor source file
+$(OBJ_DIR)/sensor.o: src/sensor.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile utils source file
+$(OBJ_DIR)/utils.o: src/utils.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Clean build artifacts
 clean:
-	rm -f $(OBJ) $(TEST_OBJ) $(TEST_EXEC)
+	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-# Run tests using Valgrind for memory checking
-valgrind: $(TEST_EXEC)
-	$(VALGRIND_COMMAND) ./$(TEST_EXEC)
+# Run Cppcheck
+lint:
+	cppcheck --force --enable=all --inconclusive --std=c++17 -Iinclude -I/usr/include --suppress=missingIncludeSystem --suppress=syntaxError src/*.c
 
-# Run tests with AddressSanitizer (for detecting runtime memory issues)
-asan: $(TEST_EXEC)
-	./$(TEST_EXEC)
+# Run the tests (Google Test)
+test: $(BIN_DIR)/test_sensor
+	$(BIN_DIR)/test_sensor
+
+.PHONY: all dirs clean lint debug test
