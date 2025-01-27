@@ -11,22 +11,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repository with submodules
       uses: actions/checkout@v3
       with:
-        submodules: true
+        submodules: true  # Ensure submodules (e.g., googletest) are initialized
 
-    - name: Set up GoogleTest
+    - name: Install dependencies
       run: |
-        mkdir -p googletest/build
-        cd googletest
-        cmake -S . -B build
-        make -C build
+        sudo apt-get update
+        sudo apt-get install -y cppcheck build-essential
 
     - name: Run cppcheck
       run: cppcheck --enable=all --inconclusive --std=c99 --suppress=missingIncludeSystem .
 
     - name: Build and run tests
       run: |
+        make clean
         make tests
-        make run-tests
+        ./tests/test_main  # Run the GoogleTest executable
