@@ -2,38 +2,29 @@
 CC = gcc
 CXX = g++
 CFLAGS = -Wall -Wextra -pedantic -Iinclude
+LDFLAGS = -pthread
 GTEST_DIR = googletest
-GTEST_LIB = $(GTEST_DIR)/build/lib/libgtest.a $(GTEST_DIR)/build/lib/libgtest_main.a
+GTEST_SRC = $(GTEST_DIR)/googletest/src/gtest-all.cc
+GTEST_HEADERS = $(GTEST_DIR)/googletest/include/gtest/*.h
 
 # Source files and objects
 SRC = src/sensor.c src/utils.c
 OBJ = $(SRC:.c=.o)
+TEST_SRC = tests/test_main.cpp
+TEST_OBJ = $(TEST_SRC:.cpp=.o)
 
 # Targets
 all: main tests
 
-# Build main executable
 main: main.c $(OBJ)
 	$(CC) $(CFLAGS) -o main main.c $(OBJ)
 
-# Build and link GoogleTest-based tests
-tests: tests/test_main.cpp $(OBJ)
-	mkdir -p $(GTEST_DIR)/build
-	cd $(GTEST_DIR) && cmake -S . -B build
-	make -C $(GTEST_DIR)/build
-	$(CXX) -std=c++17 -isystem $(GTEST_DIR)/googletest/include -Iinclude \
-        -pthread $(OBJ) tests/test_main.cpp $(GTEST_LIB) -o tests/test_main
+tests: $(TEST_OBJ) $(OBJ) gtest_main.o
+	$(CXX) $(LDFLAGS) -o tests/test_main $(TEST_OBJ) $(OBJ) gtest_main.o
 
-# Run tests
-run-tests: tests
-	./tests/test_main
+gtest_main.o:
+	$(CXX) $(CFLAGS) -isystem $(GTEST_DIR)/googletest/include -I$(GTEST_DIR) \
+		-c $(GTEST_SRC) -o gtest_main.o
 
-# Run cppcheck
-cppcheck:
-	cppcheck --enable=all --inconclusive --std=c99 --suppress=missingIncludeSystem .
-
-# Clean up
 clean:
-	rm -f main tests/test_main $(OBJ)
-
-.PHONY: all clean cppcheck run-tests
+	rm -f main tests/test_main gtest_main.o $(OBJ) $(TEST_OBJ)
