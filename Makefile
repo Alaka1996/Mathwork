@@ -1,30 +1,20 @@
-# Compiler and flags
-CC = gcc
 CXX = g++
-CFLAGS = -Wall -Wextra -pedantic -Iinclude
-LDFLAGS = -pthread
-GTEST_DIR = googletest
-GTEST_SRC = $(GTEST_DIR)/googletest/src/gtest-all.cc
-GTEST_HEADERS = $(GTEST_DIR)/googletest/include/gtest/*.h
+CXXFLAGS = -Wall -Wextra -pedantic
+GTEST_DIR = ./googletest
+GTEST_INCLUDE = $(GTEST_DIR)/include
+GTEST_LIB = $(GTEST_DIR)/build
 
-# Source files and objects
-SRC = src/sensor.c src/utils.c
-OBJ = $(SRC:.c=.o)
 TEST_SRC = tests/test_main.cpp
-TEST_OBJ = $(TEST_SRC:.cpp=.o)
+TEST_OBJ = tests/test_main.o
+TEST_EXEC = tests/test_executable
 
-# Targets
-all: main tests
+all: $(TEST_EXEC)
 
-main: main.c $(OBJ)
-	$(CC) $(CFLAGS) -o main main.c $(OBJ)
+$(TEST_EXEC): $(TEST_OBJ)
+    $(CXX) $(CXXFLAGS) -L$(GTEST_LIB) -lgtest -lgtest_main -o $@ $^
 
-tests: $(TEST_OBJ) $(OBJ) gtest_main.o
-	$(CXX) $(LDFLAGS) -o tests/test_main $(TEST_OBJ) $(OBJ) gtest_main.o
-
-gtest_main.o:
-	$(CXX) $(CFLAGS) -isystem $(GTEST_DIR)/googletest/include -I$(GTEST_DIR) \
-		-c $(GTEST_SRC) -o gtest_main.o
+$(TEST_OBJ): $(TEST_SRC)
+    $(CXX) $(CXXFLAGS) -I$(GTEST_INCLUDE) -c $< -o $@
 
 clean:
-	rm -f main tests/test_main gtest_main.o $(OBJ) $(TEST_OBJ)
+    rm -f $(TEST_OBJ) $(TEST_EXEC)
